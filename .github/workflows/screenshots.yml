@@ -1,0 +1,169 @@
+name: Generate SwiftUI Screenshots
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    name: Build Apps and Take Screenshots
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: List available Simulators
+        run: |
+          xcrun simctl list devices available
+
+      - name: Start Simulator
+        run: |
+          # Find a valid iPhone simulator name (usually iPhone 15 or iPhone 16)
+          # We'll use "iPhone 15" which is standard on macOS 14 runners
+          SIM_NAME="iPhone 15"
+          echo "Booting simulator: $SIM_NAME"
+          xcrun simctl boot "$SIM_NAME" || true
+          # Wait until the simulator is fully booted
+          xcrun simctl bootstatus booted
+
+      - name: Build and Capture Parte 1 (UI Layouts)
+        run: |
+          cd tareas/Parte1_SwiftUI.swiftpm
+          echo "Building Parte 1..."
+          xcodebuild build -scheme Parte1_SwiftUI -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 15" -derivedDataPath ./build
+          
+          echo "Installing Parte 1..."
+          xcrun simctl install booted ./build/Build/Products/Debug-iphonesimulator/Parte1_SwiftUI.app
+          
+          # Enable screenshotMode
+          xcrun simctl spawn booted defaults write com.curso.parte1 screenshotMode -bool true
+          
+          # Capture Step 1 (Ejercicio 1)
+          echo "Capturing Ejercicio 1..."
+          xcrun simctl spawn booted defaults write com.curso.parte1 screenshotStep -int 1
+          xcrun simctl launch booted com.curso.parte1
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte1_ej1.png
+          xcrun simctl terminate booted com.curso.parte1
+          
+          # Capture Step 2 (Ejercicio 2)
+          echo "Capturing Ejercicio 2..."
+          xcrun simctl spawn booted defaults write com.curso.parte1 screenshotStep -int 2
+          xcrun simctl launch booted com.curso.parte1
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte1_ej2.png
+          xcrun simctl terminate booted com.curso.parte1
+          
+          # Capture Step 3 (Ejercicio 3)
+          echo "Capturing Ejercicio 3..."
+          xcrun simctl spawn booted defaults write com.curso.parte1 screenshotStep -int 3
+          xcrun simctl launch booted com.curso.parte1
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte1_ej3.png
+          xcrun simctl terminate booted com.curso.parte1
+          
+          # Capture Step 4 (Ejercicio 4)
+          echo "Capturing Ejercicio 4..."
+          xcrun simctl spawn booted defaults write com.curso.parte1 screenshotStep -int 4
+          xcrun simctl launch booted com.curso.parte1
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte1_ej4.png
+          xcrun simctl terminate booted com.curso.parte1
+
+      - name: Build and Capture Parte 2 (States & Lists)
+        run: |
+          cd tareas/Parte2_SwiftUI.swiftpm
+          echo "Building Parte 2..."
+          xcodebuild build -scheme Parte2_SwiftUI -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 15" -derivedDataPath ./build
+          
+          echo "Installing Parte 2..."
+          xcrun simctl install booted ./build/Build/Products/Debug-iphonesimulator/Parte2_SwiftUI.app
+          
+          # Enable screenshotMode
+          xcrun simctl spawn booted defaults write com.curso.parte2 screenshotMode -bool true
+          
+          # Capture Step 1 (Ejercicio 5 - Estados)
+          echo "Capturing Ejercicio 5..."
+          xcrun simctl spawn booted defaults write com.curso.parte2 screenshotStep -int 1
+          xcrun simctl launch booted com.curso.parte2
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte2_ej5.png
+          xcrun simctl terminate booted com.curso.parte2
+          
+          # Capture Step 2 (Ejercicio 6 - Listas)
+          echo "Capturing Ejercicio 6..."
+          xcrun simctl spawn booted defaults write com.curso.parte2 screenshotStep -int 2
+          xcrun simctl launch booted com.curso.parte2
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte2_ej6.png
+          xcrun simctl terminate booted com.curso.parte2
+          
+          # Capture Step 3 (Configuracion)
+          echo "Capturing Configuración..."
+          xcrun simctl spawn booted defaults write com.curso.parte2 screenshotStep -int 3
+          xcrun simctl launch booted com.curso.parte2
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte2_configuracion.png
+          xcrun simctl terminate booted com.curso.parte2
+
+      - name: Build and Capture Parte 3 (CRUD)
+        run: |
+          cd tareas/Parte3_CRUD.swiftpm
+          echo "Building Parte 3..."
+          xcodebuild build -scheme Parte3_CRUD -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 15" -derivedDataPath ./build
+          
+          echo "Installing Parte 3..."
+          xcrun simctl install booted ./build/Build/Products/Debug-iphonesimulator/Parte3_CRUD.app
+          
+          # Enable screenshotMode
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotMode -bool true
+          
+          # Capture Step 1 (Login View)
+          echo "Capturing Login View..."
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotStep -int 1
+          xcrun simctl launch booted com.curso.parte3
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte3_login.png
+          xcrun simctl terminate booted com.curso.parte3
+          
+          # Capture Step 2 (Main Menu)
+          echo "Capturing Main Menu..."
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotStep -int 2
+          xcrun simctl launch booted com.curso.parte3
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte3_menu.png
+          xcrun simctl terminate booted com.curso.parte3
+          
+          # Capture Step 3 (Book Catalog / List)
+          echo "Capturing Catalog..."
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotStep -int 3
+          xcrun simctl launch booted com.curso.parte3
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte3_catalogo.png
+          xcrun simctl terminate booted com.curso.parte3
+          
+          # Capture Step 4 (New Book Form)
+          echo "Capturing Add Book Form..."
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotStep -int 4
+          xcrun simctl launch booted com.curso.parte3
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte3_nuevo_libro.png
+          xcrun simctl terminate booted com.curso.parte3
+          
+          # Capture Step 5 (Edit Book Form)
+          echo "Capturing Edit Book Form..."
+          xcrun simctl spawn booted defaults write com.curso.parte3 screenshotStep -int 5
+          xcrun simctl launch booted com.curso.parte3
+          sleep 4
+          xcrun simctl io booted screenshot ../../screenshot_parte3_editar_libro.png
+          xcrun simctl terminate booted com.curso.parte3
+
+      - name: Upload Screenshot Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots_swiftui
+          path: |
+            *.png
