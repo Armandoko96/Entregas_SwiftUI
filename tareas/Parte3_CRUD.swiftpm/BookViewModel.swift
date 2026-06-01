@@ -12,7 +12,7 @@ class BookViewModel: ObservableObject {
     }
     
     func fetchLocalBooks() {
-        let request: NSFetchRequest<BookEntity> = BookEntity.fetchRequest() as! NSFetchRequest<BookEntity>
+        let request = NSFetchRequest<BookEntity>(entityName: "BookEntity")
         do {
             let entities = try context.fetch(request)
             self.books = entities.map { entity in
