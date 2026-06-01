@@ -1,0 +1,12 @@
+# Swift/Xcode
+.build/
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+.DS_Store
+
+# Archives
+*.zip
+*.rar
+*.7z
