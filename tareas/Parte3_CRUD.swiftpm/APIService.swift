@@ -1,11 +1,12 @@
 import Foundation
 
 class APIService {
-    // Usamos localhost para emuladores iOS
+    // la api del profe, en simulador se conecta al localhost de la mac
     static let baseURL = "http://localhost/demoapi1/libros.php"
     
     static func fetchBooks(completion: @escaping (Result<[Book], Error>) -> Void) {
         guard let url = URL(string: baseURL) else { return }
+        
         URLSession.shared.dataTask(with: url) { data, _, error in
             if let error = error {
                 completion(.failure(error))
@@ -13,10 +14,14 @@ class APIService {
             }
             guard let data = data else { return }
             do {
-                let books = try JSONDecoder().decode([Book].self, from: data)
-                DispatchQueue.main.async { completion(.success(books)) }
+                let libros = try JSONDecoder().decode([Book].self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(libros))
+                }
             } catch {
-                DispatchQueue.main.async { completion(.failure(error)) }
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
             }
         }.resume()
     }
@@ -26,6 +31,7 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
         do {
             request.httpBody = try JSONEncoder().encode(book)
         } catch {
@@ -33,9 +39,10 @@ class APIService {
             return
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { _, response, error in
             DispatchQueue.main.async {
-                completion(error == nil && (response as? HTTPURLResponse)?.statusCode == 200)
+                let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+                completion(ok)
             }
         }.resume()
     }
@@ -45,6 +52,7 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
         do {
             request.httpBody = try JSONEncoder().encode(book)
         } catch {
@@ -52,25 +60,25 @@ class APIService {
             return
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { _, response, error in
             DispatchQueue.main.async {
-                completion(error == nil && (response as? HTTPURLResponse)?.statusCode == 200)
+                let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+                completion(ok)
             }
         }.resume()
     }
     
     static func deleteBook(id: Int, completion: @escaping (Bool) -> Void) {
-        // Enviar body JSON para el DELETE (según demoapi1 usual)
         guard let url = URL(string: baseURL) else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body = ["id": id]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { _, response, error in
             DispatchQueue.main.async {
-                completion(error == nil && (response as? HTTPURLResponse)?.statusCode == 200)
+                let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+                completion(ok)
             }
         }.resume()
     }

@@ -7,86 +7,103 @@ class BookViewModel: ObservableObject {
     private var context = CoreDataManager.shared.container.viewContext
     
     init() {
-        fetchLocalBooks()
+        cargarLibrosLocales()
         syncWithAPI()
     }
     
-    func fetchLocalBooks() {
+    func cargarLibrosLocales() {
         let request = NSFetchRequest<BookEntity>(entityName: "BookEntity")
         do {
             let entities = try context.fetch(request)
-            self.books = entities.map { entity in
-                Book(id: Int(entity.id), title: entity.title ?? "", author: entity.author ?? "", release_year: Int(entity.release_year))
+            self.books = entities.map { e in
+                Book(id: Int(e.id), title: e.title ?? "", author: e.author ?? "", release_year: Int(e.release_year))
             }
         } catch {
-            print("Fetch error: \(error)")
+            print("Error al leer Core Data: \(error)")
         }
     }
     
     func syncWithAPI() {
-        APIService.fetchBooks { [weak self] result in
+        APIService.fetchBooks { result in
             switch result {
-            case .success(let remoteBooks):
-                self?.books = remoteBooks
-                self?.updateLocalDB(with: remoteBooks)
+            case .success(let librosRemoto):
+                self.books = librosRemoto
+                self.guardarEnLocal(librosRemoto)
             case .failure(let error):
-                print("API Sync error: \(error.localizedDescription)")
+                print("No se pudo conectar con la API: \(error.localizedDescription)")
             }
         }
     }
     
-    private func updateLocalDB(with remoteBooks: [Book]) {
-        // Clear local and insert new (simple sync strategy)
-        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "BookEntity")
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
-        _ = try? context.execute(deleteRequest)
+    private func guardarEnLocal(_ libros: [Book]) {
+        // borramos y volvemos a insertar para tener todo sincronizado
+        let deleteReq = NSFetchRequest<NSFetchRequestResult>(entityName: "BookEntity")
+        let batch = NSBatchDeleteRequest(fetchRequest: deleteReq)
+        _ = try? context.execute(batch)
         
-        for book in remoteBooks {
+        for libro in libros {
             let entity = BookEntity(context: context)
-            entity.id = Int32(book.id)
-            entity.title = book.title
-            entity.author = book.author
-            entity.release_year = Int32(book.release_year)
+            entity.id = Int32(libro.id)
+            entity.title = libro.title
+            entity.author = libro.author
+            entity.release_year = Int32(libro.release_year)
         }
         CoreDataManager.shared.saveContext()
     }
     
     func addBook(title: String, author: String, year: Int) {
-        // Optimistic ID creation
-        let newId = (books.map { $0.id }.max() ?? 0) + 1
-        let newBook = Book(id: newId, title: title, author: author, release_year: year)
+        let nuevoId = (books.map { $0.id }.max() ?? 0) + 1
+        let nuevo = Book(id: nuevoId, title: title, author: author, release_year: year)
+        books.append(nuevo)
         
-        books.append(newBook)
+        // Persistencia inmediata local en Core Data
+        let entity = BookEntity(context: context)
+        entity.id = Int32(nuevo.id)
+        entity.title = nuevo.title
+        entity.author = nuevo.author
+        entity.release_year = Int32(nuevo.release_year)
+        CoreDataManager.shared.saveContext()
         
-        APIService.createBook(newBook) { success in
-            if success {
-                self.syncWithAPI()
-            } else {
-                print("Error adding via API")
-            }
+        APIService.createBook(nuevo) { ok in
+            if ok { self.syncWithAPI() }
         }
     }
     
     func updateBook(book: Book) {
-        if let index = books.firstIndex(where: { $0.id == book.id }) {
-            books[index] = book
+        if let i = books.firstIndex(where: { $0.id == book.id }) {
+            books[i] = book
         }
         
-        APIService.updateBook(book) { success in
-            if success {
-                self.syncWithAPI()
-            }
+        // Persistencia inmediata local en Core Data
+        let request = NSFetchRequest<BookEntity>(entityName: "BookEntity")
+        request.predicate = NSPredicate(format: "id == %d", book.id)
+        if let results = try? context.fetch(request), let entity = results.first {
+            entity.title = book.title
+            entity.author = book.author
+            entity.release_year = Int32(book.release_year)
+            CoreDataManager.shared.saveContext()
+        }
+        
+        APIService.updateBook(book) { ok in
+            if ok { self.syncWithAPI() }
         }
     }
     
     func deleteBook(at offsets: IndexSet) {
-        offsets.forEach { index in
-            let book = books[index]
-            books.remove(at: index)
-            APIService.deleteBook(id: book.id) { success in
-                if success {
-                    self.syncWithAPI()
-                }
+        offsets.forEach { i in
+            let libro = books[i]
+            books.remove(at: i)
+            
+            // Persistencia inmediata local en Core Data
+            let request = NSFetchRequest<BookEntity>(entityName: "BookEntity")
+            request.predicate = NSPredicate(format: "id == %d", libro.id)
+            if let results = try? context.fetch(request), let entity = results.first {
+                context.delete(entity)
+                CoreDataManager.shared.saveContext()
+            }
+            
+            APIService.deleteBook(id: libro.id) { ok in
+                if ok { self.syncWithAPI() }
             }
         }
     }
